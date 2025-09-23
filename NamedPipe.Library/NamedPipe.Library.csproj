@@ -42,8 +42,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="NamedPipesKit.cs" />
+    <Compile Include="AsyncManualResetEvent.cs" />
+    <Compile Include="Envelope.cs" />
+    <Compile Include="EnvelopeOptions.cs" />
+    <Compile Include="Framing.cs" />
+    <Compile Include="JsonUtil.cs" />
+    <Compile Include="LaserCommand.cs" />
+    <Compile Include="PendingEntry.cs" />
+    <Compile Include="PendingInfo.cs" />
+    <Compile Include="PipeClient.cs" />
+    <Compile Include="PipeServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServerSingleClientHelper.cs" />
+    <Compile Include="UnmatchedResponseInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

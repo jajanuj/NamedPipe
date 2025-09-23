@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="GRT.SDK.Framework">
-      <HintPath>..\..\Rofin.Laser\Library\GRT.SDK.Framework.dll</HintPath>
+      <HintPath>..\Library\GRT.SDK.Framework.dll</HintPath>
     </Reference>
     <Reference Include="NamedPipe.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

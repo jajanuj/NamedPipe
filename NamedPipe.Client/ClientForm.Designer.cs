@@ -28,49 +28,84 @@
       /// </summary>
       private void InitializeComponent()
       {
-         this.btnEventMessage = new System.Windows.Forms.Button();
-         this.btnRequestResponse = new System.Windows.Forms.Button();
+         this.components = new System.ComponentModel.Container();
+         this.txtLog = new System.Windows.Forms.TextBox();
+         this.btnResponseStatus = new System.Windows.Forms.Button();
+         this.btnSendRawMessage = new System.Windows.Forms.Button();
+         this.txtRawMessage = new System.Windows.Forms.TextBox();
+         this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
          this.SuspendLayout();
          // 
-         // btnEventMessage
+         // txtLog
          // 
-         this.btnEventMessage.Location = new System.Drawing.Point(81, 64);
-         this.btnEventMessage.Name = "btnEventMessage";
-         this.btnEventMessage.Size = new System.Drawing.Size(135, 32);
-         this.btnEventMessage.TabIndex = 0;
-         this.btnEventMessage.Text = "Event Message";
-         this.btnEventMessage.UseVisualStyleBackColor = true;
-         this.btnEventMessage.Click += new System.EventHandler(this.btnEventMessage_Click);
+         this.txtLog.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+         this.txtLog.Dock = System.Windows.Forms.DockStyle.Bottom;
+         this.txtLog.Location = new System.Drawing.Point(0, 136);
+         this.txtLog.Multiline = true;
+         this.txtLog.Name = "txtLog";
+         this.txtLog.Size = new System.Drawing.Size(535, 329);
+         this.txtLog.TabIndex = 2;
          // 
-         // btnRequestResponse
+         // btnResponseStatus
          // 
-         this.btnRequestResponse.Location = new System.Drawing.Point(81, 129);
-         this.btnRequestResponse.Name = "btnRequestResponse";
-         this.btnRequestResponse.Size = new System.Drawing.Size(135, 32);
-         this.btnRequestResponse.TabIndex = 1;
-         this.btnRequestResponse.Text = "Request / Response";
-         this.btnRequestResponse.UseVisualStyleBackColor = true;
-         this.btnRequestResponse.Click += new System.EventHandler(this.btnRequestResponse_Click);
+         this.btnResponseStatus.BackColor = System.Drawing.Color.LawnGreen;
+         this.btnResponseStatus.Location = new System.Drawing.Point(12, 45);
+         this.btnResponseStatus.Name = "btnResponseStatus";
+         this.btnResponseStatus.Size = new System.Drawing.Size(181, 31);
+         this.btnResponseStatus.TabIndex = 3;
+         this.btnResponseStatus.Text = "Response Status";
+         this.btnResponseStatus.UseVisualStyleBackColor = false;
+         this.btnResponseStatus.Click += new System.EventHandler(this.btnResponseStatus_Click);
+         // 
+         // btnSendRawMessage
+         // 
+         this.btnSendRawMessage.Location = new System.Drawing.Point(12, 8);
+         this.btnSendRawMessage.Name = "btnSendRawMessage";
+         this.btnSendRawMessage.Size = new System.Drawing.Size(181, 31);
+         this.btnSendRawMessage.TabIndex = 4;
+         this.btnSendRawMessage.Text = "Send Raw Message";
+         this.btnSendRawMessage.UseVisualStyleBackColor = true;
+         this.btnSendRawMessage.Click += new System.EventHandler(this.btnSendRawMessage_Click);
+         // 
+         // txtRawMessage
+         // 
+         this.txtRawMessage.Location = new System.Drawing.Point(199, 12);
+         this.txtRawMessage.Name = "txtRawMessage";
+         this.txtRawMessage.Size = new System.Drawing.Size(140, 25);
+         this.txtRawMessage.TabIndex = 5;
+         this.txtRawMessage.Text = "Hello Server";
+         // 
+         // contextMenuStrip1
+         // 
+         this.contextMenuStrip1.Name = "contextMenuStrip1";
+         this.contextMenuStrip1.Size = new System.Drawing.Size(61, 4);
          // 
          // ClientForm
          // 
          this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
          this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
          this.BackColor = System.Drawing.Color.AntiqueWhite;
-         this.ClientSize = new System.Drawing.Size(535, 320);
-         this.Controls.Add(this.btnRequestResponse);
-         this.Controls.Add(this.btnEventMessage);
+         this.ClientSize = new System.Drawing.Size(535, 465);
+         this.Controls.Add(this.txtRawMessage);
+         this.Controls.Add(this.btnSendRawMessage);
+         this.Controls.Add(this.btnResponseStatus);
+         this.Controls.Add(this.txtLog);
          this.Font = new System.Drawing.Font("微軟正黑體", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+         this.Location = new System.Drawing.Point(900, 300);
          this.Name = "ClientForm";
+         this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
          this.Text = "Client";
          this.ResumeLayout(false);
+         this.PerformLayout();
 
       }
 
       #endregion
-
-      private System.Windows.Forms.Button btnEventMessage;
-      private System.Windows.Forms.Button btnRequestResponse;
+      private System.Windows.Forms.TextBox txtLog;
+      private System.Windows.Forms.Button btnResponseStatus;
+      private System.Windows.Forms.Button btnSendRawMessage;
+      private System.Windows.Forms.TextBox txtRawMessage;
+      private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
    }
 }
 

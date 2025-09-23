@@ -1,9 +1,12 @@
-﻿using GRT.SDK.Framework.FlowChart;
+﻿using GRT.SDK.Framework.Common;
+using GRT.SDK.Framework.FlowChart;
+using GRT.SDK.Framework.Logger;
 using NamedPipe.Library;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static NamedPipe.Library.LaserCommand;
 
 namespace NamedPipe.Server
 {
@@ -12,12 +15,11 @@ namespace NamedPipe.Server
       #region Fields
 
       private bool _flowRunning;
+      private ServerSingleClientHelper _helper;
       private bool _isSent;
-
-      private PipeServer.ClientConnection _onlyClient;
-
-      private bool _serverClose;
+      private CancellationTokenSource _monitorCts;
       private Task _task;
+      private Task<string> _taskStatus;
 
       #endregion
 
@@ -27,6 +29,23 @@ namespace NamedPipe.Server
       {
          InitializeComponent();
          InitializeServer();
+         Logger.Start($"{Application.StartupPath}");
+      }
+
+      #endregion
+
+      #region Protected Methods
+
+      protected override void OnFormClosing(FormClosingEventArgs e)
+      {
+         base.OnFormClosing(e);
+         try
+         {
+            _helper?.Dispose();
+         }
+         catch
+         {
+         }
       }
 
       #endregion
@@ -35,32 +54,17 @@ namespace NamedPipe.Server
 
       private void InitializeServer()
       {
-         var server = new PipeServer("demo.pipe", maxInstances: 10);
-
-         // 事件：原始訊息（非信封）
-         server.MessageReceived += (c, msg) => Console.WriteLine("[raw <= #" + c.Id + "] " + msg);
-
-         // 註冊 Request/Response handlers
-         server.RegisterHandler("Echo", s => Task.FromResult("ACK:" + s));
-         server.RegisterHandler("Add", s =>
+         EnvelopeOptions.UsePrefix = true;
+         _helper = new ServerSingleClientHelper("demo.pipe");
+         _helper.OnlineChanged += online => lblStatus.Text = online ? "已連線" : "未連線";
+         _helper.RawReceived += msg => txtLog.AppendText($"[Server Received] {msg}\r\n");
+         _helper.Faulted += ex => txtLog.AppendText($"[Server error] {ex}");
+         _helper.UnmatchedResponse += info =>
          {
-            var parts = (s ?? "0,0").Split(',');
-            int a = int.Parse(parts[0]);
-            int b = int.Parse(parts[1]);
-            return Task.FromResult((a + b).ToString());
-         });
-
-         server.ClientConnected += c =>
-         {
-            _onlyClient = c;
-            Console.WriteLine("Client #" + c.Id + " connected");
+            txtLog.AppendText(
+               $"[Unmatched] cid={info.CorrelationId} got={info.Type} expected={info.ExpectedAction} age={(int)(info.Age?.TotalMilliseconds ?? -1)}ms\r\n");
          };
-         server.ClientDisconnected += c => Console.WriteLine("Client #" + c.Id + " disconnected");
-         server.Faulted += ex => Console.WriteLine("Server error: " + ex);
-         server.Start();
-
-         Console.WriteLine("Server started. Enter to broadcast raw message, 'q' to quit.");
-         Task.Run(() => WaitCloseCommand(server));
+         _helper.Start();
       }
 
       private static void WaitCloseCommand(PipeServer server)
@@ -72,29 +76,11 @@ namespace NamedPipe.Server
          }
       }
 
-      private void btnServerClose_Click(object sender, EventArgs e)
-      {
-         _serverClose = false;
-      }
-
       private async void btnSendRawMessage_Click(object sender, EventArgs e)
       {
-         if (_onlyClient == null || !_onlyClient.IsConnected)
+         if (!await _helper.TrySendRaw(txtRawMessage.Text))
          {
-            MessageBox.Show("尚未連線。");
-            return;
-         }
-
-         try
-         {
-            var text = txtRawMessage.Text;
-            await _onlyClient.SendAsync(text);
-            //txtLog.AppendText($"[=>] {text}\r\n");
-            Console.WriteLine($"[S=>C] {text}\r\n");
-         }
-         catch (Exception ex)
-         {
-            MessageBox.Show("送出失敗：" + ex.Message);
+            MessageBox.Show("尚未連線或送出失敗");
          }
       }
 
@@ -111,8 +97,8 @@ namespace NamedPipe.Server
          }
 
          var text = "Flow2 Message";
-         _task = _onlyClient.SendAsync(text);
-         Console.WriteLine($"[S=>C] {text}\r\n");
+         _task = _helper.TrySendRaw(text);
+         txtLog.SafeInvoke(x => x.AppendText($"[Flow Send Message]\r\n"));
          _isSent = false;
 
          return Go.Next;
@@ -122,6 +108,37 @@ namespace NamedPipe.Server
       {
          if (_task.IsCompleted)
          {
+            return Go.Next;
+         }
+
+         return Go.Idle;
+      }
+
+      private Go flowChart6_Run()
+      {
+         _taskStatus = _helper.CallClientAsync("GetStatus", string.Empty, timeoutMs: 5000);
+         txtLog.SafeInvoke(x => x.AppendText($"[Flow Send GetStatus]\r\n"));
+
+         return Go.Next;
+      }
+
+      private Go flowChart7_Run()
+      {
+         if (_taskStatus.IsCompleted)
+         {
+            if (_taskStatus.IsFaulted)
+            {
+               txtLog.SafeInvoke(x => x.AppendText($"[GetStatus] 呼叫失敗：{_taskStatus.Exception?.GetBaseException().Message}\r\n"));
+            }
+            else if (_taskStatus.IsCanceled)
+            {
+               txtLog.SafeInvoke(x => x.AppendText($"[GetStatus] 呼叫逾時\r\n"));
+            }
+            else
+            {
+               txtLog.SafeInvoke(x => x.AppendText($"[GetStatus] {_taskStatus.Result}\r\n"));
+            }
+
             return Go.Next;
          }
 
@@ -159,6 +176,98 @@ namespace NamedPipe.Server
       private void btnFlowChart2Send_Click(object sender, EventArgs e)
       {
          _isSent = true;
+      }
+
+      private async void btnGetStatus_Click(object sender, EventArgs e)
+      {
+         try
+         {
+            txtLog.AppendText($"[Send GetStatus]\r\n");
+            var resp = await _helper.CallClientAsync("GetStatus", string.Empty, timeoutMs: 3000);
+            txtLog.AppendText($"[GetStatus] {resp}\r\n");
+         }
+         catch (Exception ex)
+         {
+            txtLog.AppendText($"[Send GetStatus Fail] {ex.Message}\r\n");
+         }
+         //await SendCommandAsync(Command., txtOffset.Text);
+      }
+
+      private async Task SendCommandAsync(Command cmd, string parameter)
+      {
+         var commandName = cmd.ToString();
+         try
+         {
+            await SendRpModeCommand(commandName, parameter);
+         }
+         catch (Exception ex)
+         {
+            txtLog.AppendText($"[Send {commandName} Fail] {ex.Message}\r\n");
+         }
+      }
+
+      private async void btnSetBarcodeContent_Click(object sender, EventArgs e)
+      {
+         await SendCommandAsync(Command.SetBarcodeContent, txtBarcodeContent.Text);
+      }
+
+      private async Task SendRpModeCommand(string command, string parameter = "")
+      {
+         txtLog.SafeInvoke(x => x.AppendText($"[Send {command}]\r\n"));
+         var resp = await _helper.CallClientAsync(command, parameter, timeoutMs: 5000);
+         txtLog.SafeInvoke(x => x.AppendText($"[Receive] {resp}\r\n"));
+      }
+
+      private async void btnSetTextContent_Click(object sender, EventArgs e)
+      {
+         await SendCommandAsync(Command.SetTextContent, txtTextContent.Text);
+      }
+
+      private async void btnLoadFile_Click(object sender, EventArgs e)
+      {
+         await SendCommandAsync(Command.LoadFile, txtLoadFilePath.Text);
+      }
+
+      private async void btnSetLaserOffset_Click(object sender, EventArgs e)
+      {
+         await SendCommandAsync(Command.SetLaserOffset, txtOffset.Text);
+      }
+
+      private void btnStartMonitoring_Click(object sender, EventArgs e)
+      {
+         if (_monitorCts != null)
+         {
+            _monitorCts.Cancel();
+            _monitorCts.Dispose();
+         }
+
+         _monitorCts = new CancellationTokenSource();
+         var token = _monitorCts.Token;
+         txtLog.AppendText("[Start Monitoring Loop]\r\n");
+         btnStartMonitoring.Enabled = false;
+         btnStopMonitoring.Enabled = true;
+         _ = Task.Run(async () =>
+         {
+            while (!token.IsCancellationRequested)
+            {
+               await SendCommandAsync(Command.StartMonitoring, string.Empty);
+               await Task.Delay(500, token);
+            }
+         }, token);
+      }
+
+      private void btnStopMonitoring_Click(object sender, EventArgs e)
+      {
+         if (_monitorCts != null)
+         {
+            _monitorCts.Cancel();
+            _monitorCts.Dispose();
+            _monitorCts = null;
+            txtLog.AppendText("[Stop Monitoring Loop]\r\n");
+         }
+
+         btnStopMonitoring.Enabled = false;
+         btnStartMonitoring.Enabled = true;
       }
 
       #endregion
