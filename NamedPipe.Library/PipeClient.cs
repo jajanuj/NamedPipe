@@ -14,6 +14,7 @@ namespace NamedPipe.Library
       #region Fields
 
       private readonly ConcurrentDictionary<string, Func<string, Task<string>>> _handlers = new ConcurrentDictionary<string, Func<string, Task<string>>>();
+      private readonly ConcurrentDictionary<string, Func<string, EventContext, Task>> _eventHandlers = new ConcurrentDictionary<string, Func<string, EventContext, Task>>();
       private readonly ConcurrentDictionary<string, PendingEntry> _pending = new ConcurrentDictionary<string, PendingEntry>();
       private readonly string _pipeName;
       private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1);
@@ -107,6 +108,22 @@ namespace NamedPipe.Library
          }
 
          _handlers[action] = handler;
+      }
+
+      /// <summary>註冊事件處理器。事件處理器負責自行發送回覆，可發送多次。</summary>
+      public void RegisterEventHandler(string eventAction, Func<string, EventContext, Task> eventHandler)
+      {
+         if (string.IsNullOrEmpty(eventAction))
+         {
+            throw new ArgumentNullException(nameof(eventAction));
+         }
+
+         if (eventHandler == null)
+         {
+            throw new ArgumentNullException(nameof(eventHandler));
+         }
+
+         _eventHandlers[eventAction] = eventHandler;
       }
 
       /// <summary>對伺服器發出 RPC 呼叫並等待回覆。</summary>
@@ -222,8 +239,43 @@ namespace NamedPipe.Library
 
                   if (!env.IsResponse && !string.IsNullOrEmpty(env.Type))
                   {
-                     if (_handlers.TryGetValue(env.Type, out var handler))
+                     // Check if this is an Event command (starts with "Event")
+                     bool isEventCommand = env.Type.StartsWith("Event", StringComparison.OrdinalIgnoreCase);
+                     
+                     if (isEventCommand && _eventHandlers.TryGetValue(env.Type, out var eventHandler))
                      {
+                        // For Event commands, create an event context that allows multiple responses
+                        var eventContext = new EventContext(this, env.Type, env.CorrelationId);
+                        
+                        _ = Task.Run(async () =>
+                        {
+                           try
+                           {
+                              // Pass the event context to the handler
+                              await eventHandler(env.Payload ?? string.Empty, eventContext).ConfigureAwait(false);
+                           }
+                           catch (Exception ex)
+                           {
+                              // Send error response for Event commands
+                              try
+                              {
+                                 await eventContext.SendResponseAsync("ERROR: " + ex.Message).ConfigureAwait(false);
+                              }
+                              catch
+                              {
+                                 var f = Faulted;
+                                 if (f != null)
+                                 {
+                                    f(ex);
+                                 }
+                              }
+                           }
+                        }, ct);
+                        continue;
+                     }
+                     else if (_handlers.TryGetValue(env.Type, out var handler))
+                     {
+                        // Regular RPC handling (existing behavior)
                         _ = Task.Run(async () =>
                         {
                            string payloadOut = string.Empty;

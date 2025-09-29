@@ -16,6 +16,7 @@ namespace NamedPipe.Library
 
       private readonly ConcurrentDictionary<int, ClientConnection> _clients = new ConcurrentDictionary<int, ClientConnection>();
       internal readonly ConcurrentDictionary<string, Func<string, Task<string>>> _handlers = new ConcurrentDictionary<string, Func<string, Task<string>>>();
+      private readonly ConcurrentDictionary<string, EventListener> _eventListeners = new ConcurrentDictionary<string, EventListener>();
       private readonly SemaphoreSlim _instanceSlots;
       private readonly int _maxInstances;
       private readonly string _pipeName;
@@ -98,6 +99,16 @@ namespace NamedPipe.Library
          {
             await kv.Value.SendAsync(message, ct).ConfigureAwait(false);
          }
+      }
+
+      internal void RegisterEventListener(EventListener listener)
+      {
+         _eventListeners.TryAdd(listener.CorrelationId, listener);
+      }
+
+      internal void UnregisterEventListener(EventListener listener)
+      {
+         _eventListeners.TryRemove(listener.CorrelationId, out _);
       }
 
       #endregion
@@ -389,6 +400,30 @@ namespace NamedPipe.Library
             }
          }
 
+         /// <summary>向此客戶端發送事件命令，返回可接收多次回覆的事件監聽器。</summary>
+         public EventListener SendEventAsync(string eventAction, string payload)
+         {
+            var cid = Guid.NewGuid().ToString("N");
+            var listener = new EventListener(_owner, this, cid, eventAction);
+            
+            var json = JsonUtil.Serialize(new Envelope { Type = eventAction, CorrelationId = cid, Payload = payload ?? string.Empty, IsResponse = false });
+            
+            // Send the event command (fire-and-forget style)
+            _ = Task.Run(async () =>
+            {
+               try
+               {
+                  await SendAsync(EnvelopeOptions.AddPrefix(json), CancellationToken.None).ConfigureAwait(false);
+               }
+               catch (Exception ex)
+               {
+                  listener.OnError(ex);
+               }
+            });
+            
+            return listener;
+         }
+
          #endregion
 
          /// <summary>釋放底層串流。</summary>
@@ -439,6 +474,13 @@ namespace NamedPipe.Library
                            }
 
                            waiter.Tcs.TrySetResult(env.Payload ?? string.Empty);
+                           continue;
+                        }
+
+                        // Check if this is a response to an Event command
+                        if (_owner._eventListeners.TryGetValue(env.CorrelationId, out var eventListener))
+                        {
+                           eventListener.OnResponse(env.Payload ?? string.Empty);
                            continue;
                         }
 
