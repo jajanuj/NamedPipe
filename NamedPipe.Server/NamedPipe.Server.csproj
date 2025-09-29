@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>NamedPipe.Server</RootNamespace>
     <AssemblyName>NamedPipe.Server</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -35,10 +35,6 @@
   <ItemGroup>
     <Reference Include="GRT.SDK.Framework">
       <HintPath>..\Library\GRT.SDK.Framework.dll</HintPath>
-    </Reference>
-    <Reference Include="NamedPipe.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\NamedPipe.Library\bin\Debug\NamedPipe.Library.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -86,6 +82,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NamedPipe.Library\NamedPipe.Library.csproj">
+      <Project>{0c6cd723-9061-4d00-bed7-f227f45dc741}</Project>
+      <Name>NamedPipe.Library</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
