@@ -106,6 +106,9 @@ namespace NamedPipe.Client
             return Task.FromResult($"1,0,1");
          });
 
+         // 註冊 EventStatusChanged 事件處理器
+         _client.RegisterEventHandler("EventStatusChanged", HandleEventStatusChanged);
+
          await _client.ConnectAsync();
          _logQ.Add($"Connected.\r\n");
 
@@ -136,6 +139,38 @@ namespace NamedPipe.Client
          var msg = $"OK- {Environment.MachineName}";
          _logQ.Add($"[Send] {msg}\r\n");
          return msg;
+      }
+
+      private async Task HandleEventStatusChanged(string payload, EventContext eventContext)
+      {
+         _logQ.Add($"[EventStatusChanged] 收到事件命令，開始監控狀態變化...\r\n");
+         
+         // 模擬狀態變化並多次回應
+         var random = new Random();
+         
+         for (int i = 1; i <= 5; i++)
+         {
+            // 等待一段時間模擬狀態變化
+            await Task.Delay(2000); // 2秒間隔
+            
+            var status = new
+            {
+               Timestamp = DateTime.Now.ToString("HH:mm:ss"),
+               StatusId = i,
+               MachineName = Environment.MachineName,
+               ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id,
+               RandomValue = random.Next(100, 999)
+            };
+            
+            var response = $"Status_{i}: {status.Timestamp} - {status.MachineName} (PID:{status.ProcessId}) Value:{status.RandomValue}";
+            
+            _logQ.Add($"[EventStatusChanged] 發送回覆 #{i}: {response}\r\n");
+            
+            // 向服務器發送狀態回覆
+            await eventContext.SendResponseAsync(response);
+         }
+         
+         _logQ.Add($"[EventStatusChanged] 狀態監控完成，共發送 5 次回覆\r\n");
       }
 
       private void btnResponseStatus_Click(object sender, EventArgs e)

@@ -190,7 +190,47 @@ namespace NamedPipe.Server
          {
             txtLog.AppendText($"[Send GetStatus Fail] {ex.Message}\r\n");
          }
-         //await SendCommandAsync(Command., txtOffset.Text);
+
+         // 演示 EventStatusChanged 功能
+         try
+         {
+            txtLog.AppendText($"\r\n[開始測試 EventStatusChanged]\r\n");
+            var eventListener = _helper.SendEventToClient("EventStatusChanged", "開始狀態監控");
+
+            // 訂閱事件回覆
+            eventListener.ResponseReceived += (response) =>
+            {
+               txtLog.BeginInvoke((Action)(() =>
+               {
+                  txtLog.AppendText($"[EventStatusChanged 收到回覆] {response}\r\n");
+               }));
+            };
+
+            eventListener.ErrorOccurred += (error) =>
+            {
+               txtLog.BeginInvoke((Action)(() =>
+               {
+                  txtLog.AppendText($"[EventStatusChanged 錯誤] {error.Message}\r\n");
+               }));
+            };
+
+            txtLog.AppendText($"[EventStatusChanged] 事件已發送，等待客戶端回覆...\r\n");
+            
+            // 設定 15 秒後自動清理監聽器
+            _ = Task.Run(async () =>
+            {
+               await Task.Delay(15000);
+               eventListener.Dispose();
+               txtLog.BeginInvoke((Action)(() =>
+               {
+                  txtLog.AppendText($"[EventStatusChanged] 事件監聽器已清理\r\n\r\n");
+               }));
+            });
+         }
+         catch (Exception ex)
+         {
+            txtLog.AppendText($"[EventStatusChanged Fail] {ex.Message}\r\n");
+         }
       }
 
       private async Task SendCommandAsync(Command cmd, string parameter)
