@@ -36,10 +36,6 @@
     <Reference Include="GRT.SDK.Framework">
       <HintPath>..\Library\GRT.SDK.Framework.dll</HintPath>
     </Reference>
-    <Reference Include="NamedPipe.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\NamedPipe.Library\bin\Debug\NamedPipe.Library.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -86,6 +82,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NamedPipe.Library\NamedPipe.Library.csproj">
+      <Project>{0c6cd723-9061-4d00-bed7-f227f45dc741}</Project>
+      <Name>NamedPipe.Library</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

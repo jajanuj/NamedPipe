@@ -45,6 +45,8 @@
     <Compile Include="AsyncManualResetEvent.cs" />
     <Compile Include="Envelope.cs" />
     <Compile Include="EnvelopeOptions.cs" />
+    <Compile Include="EventContext.cs" />
+    <Compile Include="EventListener.cs" />
     <Compile Include="Framing.cs" />
     <Compile Include="JsonUtil.cs" />
     <Compile Include="LaserCommand.cs" />

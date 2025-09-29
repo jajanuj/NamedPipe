@@ -128,6 +128,18 @@ namespace NamedPipe.Library
          return await c.CallAsync(action, payload, timeoutMs, ct).ConfigureAwait(false);
       }
 
+      /// <summary>對唯一 client 發送事件命令，返回可接收多次回覆的事件監聽器。</summary>
+      public EventListener SendEventToClient(string eventAction, string payload)
+      {
+         var c = _conn;
+         if (c == null || !c.IsConnected)
+         {
+            throw new InvalidOperationException("未連線");
+         }
+
+         return c.SendEventAsync(eventAction, payload);
+      }
+
       /// <summary>取得唯一 client 的 pending 請求快照（未連線則回空陣列）。</summary>
       public PendingInfo[] GetClientPendingSnapshot()
       {
